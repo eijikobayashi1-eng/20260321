@@ -24,6 +24,17 @@ import {
 // CLI helpers
 // ---------------------------------------------------------------------------
 
+function getJapaneseGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 11) return "おはようございます！";
+  if (hour >= 11 && hour < 18) return "こんにちは！";
+  return "こんばんは！";
+}
+
+function commandGreet(): void {
+  console.log(getJapaneseGreeting());
+}
+
 function printUsage(): void {
   console.log(`
 Claude Code – Browser Link
@@ -35,6 +46,7 @@ Commands:
   link    Link this desktop session with a browser Claude Code session
   status  Show the currently linked session
   unlink  Remove the linked session credentials
+  greet   Print a Japanese greeting
 
 Options:
   --port <number>   Port for the local callback server (default: ${DEFAULT_LINK_PORT})
@@ -183,6 +195,10 @@ async function main(): Promise<void> {
 
     case "unlink":
       commandUnlink();
+      break;
+
+    case "greet":
+      commandGreet();
       break;
 
     case "":
