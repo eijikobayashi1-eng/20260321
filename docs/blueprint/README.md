@@ -3,6 +3,9 @@
 正本: [`manga_agent_ecosystem_orgchart.html`](manga_agent_ecosystem_orgchart.html)（2026-09-23版、製作者会議 9/24 提示版）
 ※ 使用AIはすべて仮設定。
 
+**保存ルール:** 体系図を更新したら、このリポジトリと同時に Google ドライブの
+「コルト ＞ AIエージェント化開発会議」フォルダ（PC上は `C:\Users\eijik\Google ドライブ\pc-NEC\D\EIJI\ＰＢ移動用\コルト\AIエージェント化開発会議`）にも保存する。
+
 ## 全体構造
 
 ```
