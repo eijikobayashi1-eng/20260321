@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>コルト AIエージェントエコシステム 体系図</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Meiryo, sans-serif;
+    background: #F0F4F8;
+    color: #1a1a2e;
+    padding: 32px 24px;
+    min-width: 1200px;
+  }
+
+  h1 { text-align: center; font-size: 1.6rem; color: #1A3D7C; margin-bottom: 6px; letter-spacing: 0.05em; }
+  .subtitle { text-align: center; font-size: 0.85rem; color: #666; margin-bottom: 36px; }
+
+  /* ── BADGES ── */
+  .new-badge {
+    display: inline-block; background: #FFD700; color: #7A4F00;
+    border-radius: 4px; font-size: 0.62rem; padding: 1px 5px;
+    font-weight: bold; margin-left: 4px; vertical-align: middle;
+  }
+  .provisional-badge {
+    display: inline-block; background: #FEF3C7; color: #B45309;
+    border: 1px solid #F59E0B; border-radius: 4px; font-size: 0.62rem;
+    padding: 1px 6px; font-weight: bold; margin-left: 4px; vertical-align: middle;
+  }
+  .gate-badge {
+    display: inline-block; background: #DC2626; color: #fff;
+    border-radius: 4px; font-size: 0.62rem; padding: 1px 7px;
+    font-weight: bold; margin-left: 4px; vertical-align: middle;
+  }
+  .wf-badge {
+    display: inline-block; border-radius: 4px; font-size: 0.68rem;
+    padding: 2px 8px; font-weight: bold; letter-spacing: 0.05em;
+  }
+  .wf1 { background: #B45309; color: #fff; }
+  .wf2 { background: #DC2626; color: #fff; }
+
+  /* ── DIFF NOTE ── */
+  .diff-note {
+    background: #FFFDE7; border: 1px solid #FFD700; border-radius: 8px;
+    padding: 10px 20px; font-size: 0.75rem; color: #7A4F00;
+    margin: 0 auto 28px; max-width: 1120px; line-height: 1.8;
+  }
+  .diff-note strong { color: #B45309; }
+
+  /* ── HISTORY BAND ── */
+  .history-band {
+    background: #fff; border: 1px solid #dce3ef; border-radius: 12px;
+    padding: 16px 20px; margin: 0 auto 28px; max-width: 1120px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .history-band-title { font-size: 0.78rem; font-weight: bold; color: #1A3D7C; letter-spacing: 0.06em; margin-bottom: 12px; }
+  .history-row { display: flex; align-items: center; gap: 0; justify-content: center; }
+  .history-era { flex: 1; text-align: center; padding: 12px 10px; }
+  .h-era-label { font-size: 0.68rem; color: #888; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .h-era-icon { font-size: 1.6rem; margin-bottom: 4px; }
+  .h-era-name { font-weight: bold; color: #1A3D7C; font-size: 0.85rem; margin-bottom: 2px; }
+  .h-era-desc { font-size: 0.72rem; color: #666; }
+  .h-era-current { background: #E3F0FF; border-radius: 8px; border: 1px solid #1A3D7C; }
+  .h-era-current .h-era-name { color: #0055A4; }
+  .h-arrow { font-size: 1.4rem; color: #1A3D7C; padding: 0 8px; font-weight: bold; }
+
+  /* ── OWNER ── */
+  .owner-wrap { display: flex; justify-content: center; }
+  .owner-box {
+    background: #fff; color: #1A3D7C; border: 2px solid #1A3D7C;
+    border-radius: 12px; padding: 12px 40px; font-size: 1rem; font-weight: bold;
+    text-align: center; box-shadow: 0 3px 10px rgba(26,61,124,0.12); position: relative;
+  }
+  .owner-box::after {
+    content: ''; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+    width: 2px; height: 28px; background: #1A3D7C;
+  }
+  .owner-sub { font-size: 0.72rem; font-weight: normal; color: #666; margin-top: 3px; }
+
+  /* ── MANGA00 + INPUT00 横並び行 ── */
+  .manga-input-section { max-width: 1120px; margin: 0 auto; }
+  .v-connector { display: flex; justify-content: center; }
+  .v-connector-line { width: 2px; height: 28px; background: #1A3D7C; }
+
+  .manga-input-row {
+    display: flex; align-items: stretch; gap: 16px;
+    margin-top: 0;
+  }
+
+  /* INPUT00（左側コンパクト） */
+  .input00-side-box {
+    background: #fff; border: 2px solid #0891B2; border-radius: 12px;
+    padding: 14px 16px; width: 300px; flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(8,145,178,0.15);
+  }
+  .input00-title {
+    font-weight: bold; color: #0891B2; font-size: 0.9rem; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .step0-badge {
+    display: inline-block; background: #0891B2; color: #fff;
+    border-radius: 4px; font-size: 0.68rem; padding: 2px 8px;
+    font-weight: bold; letter-spacing: 0.05em;
+  }
+  .input00-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+  }
+  .input00-item {
+    background: #E0F7FA; border-radius: 6px; padding: 5px 8px;
+    font-size: 0.7rem; color: #006064;
+  }
+  .input00-item .i-label { font-weight: bold; color: #0891B2; display: block; margin-bottom: 1px; font-size: 0.65rem; }
+
+  /* 横矢印 */
+  .h-row-arrow {
+    font-size: 2rem; color: #1A3D7C; font-weight: bold;
+    flex-shrink: 0; align-self: center;
+  }
+
+  /* MANGA00（右側・オーケストレーター） */
+  .manga00-box {
+    background: #1A3D7C; color: #fff; border-radius: 12px;
+    padding: 14px 28px; font-size: 1rem; font-weight: bold;
+    box-shadow: 0 4px 12px rgba(26,61,124,0.3);
+    flex: 1;
+  }
+  .manga00-ai { font-size: 0.75rem; font-weight: normal; color: #FFD700; margin-top: 4px; }
+  .manga00-role {
+    font-size: 0.72rem; font-weight: normal; color: #BAD0F8; margin-top: 6px;
+    background: rgba(255,255,255,0.08); border-radius: 6px; padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,0.15); line-height: 1.6;
+  }
+
+  /* ── TEAMS ROW ── */
+  .teams-row {
+    display: flex; gap: 12px; margin-top: 0; align-items: flex-start;
+    position: relative; max-width: 1120px; margin-left: auto; margin-right: auto;
+  }
+  .teams-row::before {
+    content: ''; position: absolute; top: 0;
+    left: calc(7% + 6px); right: calc(7% + 6px);
+    height: 2px; background: #1A3D7C;
+  }
+
+  /* ── TEAM CARD BASE ── */
+  .team {
+    flex: 1; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.10); position: relative;
+  }
+  .team::before {
+    content: ''; position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+    width: 2px; height: 28px; background: #1A3D7C;
+  }
+  .team-header { padding: 12px 16px; color: #fff; font-weight: bold; font-size: 0.9rem; text-align: center; }
+  .team-body { background: #fff; padding: 12px; }
+
+  /* team colors */
+  .team-story    { border: 2px solid #1E40AF; }
+  .team-story    .team-header { background: #1E40AF; }
+  .team-story    .worker-id   { background: #1E40AF; }
+
+  .team-approval { border: 2px solid #92400E; flex: 1.5; }
+  .team-approval .team-header { background: linear-gradient(135deg, #92400E 0%, #B45309 100%); }
+
+  .team-visual   { border: 2px solid #B45309; }
+  .team-visual   .team-header { background: #B45309; }
+  .team-visual   .worker-id   { background: #B45309; }
+
+  .team-csp      { border: 2px solid #6D28D9; }
+  .team-csp      .team-header { background: #6D28D9; }
+  .team-csp      .worker-id   { background: #6D28D9; }
+
+  /* ── SEQUENCE NOTE (in story team) ── */
+  .seq-note {
+    background: #EEF2FF; border: 1px solid #4F46E5; border-radius: 6px;
+    padding: 7px 10px; font-size: 0.7rem; color: #3730A3; margin-top: 8px; line-height: 1.7;
+  }
+  .seq-note strong { color: #1E40AF; }
+
+  /* ── WORKFLOW BLOCK ── */
+  .wf-block { border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .wf-block:last-child { margin-bottom: 0; }
+  .wf-block.wf1-block { background: #FEF3C7; border: 1px solid #F59E0B; }
+  .wf-block.wf2-block { background: #FEF2F2; border: 1px solid #FECACA; border-left: 3px solid #DC2626; }
+  .wf-block-title { font-weight: bold; font-size: 0.82rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .wf1-block .wf-block-title { color: #78350F; }
+  .wf2-block .wf-block-title { color: #7F1D1D; }
+
+  .wf-agent {
+    display: flex; align-items: flex-start; gap: 7px; padding: 5px 7px;
+    border-radius: 5px; font-size: 0.75rem; line-height: 1.4;
+    background: rgba(255,255,255,0.7); margin-bottom: 5px;
+  }
+  .wf-id {
+    font-weight: bold; font-size: 0.68rem; color: #fff;
+    border-radius: 4px; padding: 1px 5px; text-align: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .wf1-id { background: #B45309; min-width: 52px; }
+  .wf2-id { background: #DC2626; min-width: 52px; }
+  .wf-name { font-weight: bold; color: #222; }
+  .wf-desc { color: #555; font-size: 0.71rem; }
+  .wf-ai {
+    font-size: 0.69rem; color: #92400E; background: #FEF3C7;
+    border-radius: 3px; padding: 1px 6px; display: inline-block; margin-top: 3px; font-weight: bold;
+  }
+  .wf2-block .wf-ai { background: #FEE2E2; color: #7F1D1D; }
+
+  /* input source tag */
+  .input-src {
+    font-size: 0.67rem; background: #E0F7FA; border: 1px solid #0891B2;
+    border-radius: 3px; padding: 1px 6px; color: #006064; font-weight: bold;
+    display: inline-block; margin-top: 3px; margin-right: 4px;
+  }
+  .input-src.story { background: #EEF2FF; border-color: #4F46E5; color: #3730A3; }
+
+  .wf-items { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+  .wf-item {
+    font-size: 0.69rem; color: #555; display: flex; align-items: flex-start; gap: 4px;
+    padding: 2px 0; border-bottom: 1px solid rgba(0,0,0,0.06);
+  }
+  .wf-item:last-child { border-bottom: none; }
+  .wf-item .ck { flex-shrink: 0; font-weight: bold; }
+  .wf1-block .wf-item .ck { color: #B45309; }
+  .wf2-block .wf-item .ck { color: #DC2626; }
+
+  .wf-warn {
+    background: rgba(255,255,255,0.8); border-radius: 5px;
+    padding: 5px 8px; margin-top: 6px; font-size: 0.68rem; line-height: 1.6;
+  }
+  .wf1-block .wf-warn { color: #78350F; border: 1px solid #F59E0B; }
+  .wf2-block .wf-warn { color: #7F1D1D; border: 1px solid #DC2626; }
+
+  .wf-result { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+  .wf-result-ok {
+    background: #E8F5E9; border: 1px solid #16A34A; border-radius: 4px;
+    padding: 2px 8px; font-size: 0.68rem; color: #166534; font-weight: bold;
+  }
+  .wf-result-ng {
+    background: #FEF2F2; border: 1px solid #DC2626; border-radius: 4px;
+    padding: 2px 8px; font-size: 0.68rem; color: #991B1B; font-weight: bold;
+  }
+
+  /* ── WORKER LIST ── */
+  .worker-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .worker {
+    display: flex; align-items: flex-start; gap: 7px; padding: 6px 8px;
+    border-radius: 6px; font-size: 0.78rem; line-height: 1.4; background: #F7F9FC;
+  }
+  .worker-id {
+    font-weight: bold; min-width: 54px; font-size: 0.68rem; color: #fff;
+    background: #1A3D7C; border-radius: 4px; padding: 1px 4px;
+    text-align: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .worker-name { font-weight: bold; color: #222; }
+  .worker-desc { color: #555; font-size: 0.72rem; }
+  .worker-ai {
+    font-size: 0.7rem; color: #92400E; background: #FEF3C7;
+    border-radius: 3px; padding: 1px 6px; display: inline-block; margin-top: 3px; font-weight: bold;
+  }
+
+  /* ── LORA NOTE ── */
+  .lora-note {
+    background: #FFFDE7; border: 1px solid #F59E0B; border-left: 3px solid #F59E0B;
+    border-radius: 6px; padding: 8px 12px; font-size: 0.71rem; color: #78350F;
+    margin-top: 10px; line-height: 1.7;
+  }
+
+  /* ── PIPELINE ── */
+  .pipeline-section { margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 8px; }
+  .pipeline-label { font-size: 0.7rem; font-weight: bold; color: #888; margin-bottom: 4px; }
+  .pipeline-flow {
+    font-size: 0.68rem; color: #444; line-height: 1.6;
+    background: #EEF2FF; border-radius: 5px; padding: 5px 8px; margin-bottom: 4px;
+  }
+  .pipeline-flow.green { background: #E8F5E9; color: #1B5E20; }
+  .pipeline-flow.red   { background: #FEF2F2; color: #7F1D1D; }
+
+  /* ── DATA FLOW ── */
+  .flow-wrap { max-width: 1120px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .flow-row { display: flex; align-items: stretch; gap: 0; justify-content: center; flex-wrap: nowrap; }
+  .flow-col { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .flow-step {
+    border-radius: 8px; padding: 10px 8px; text-align: center;
+    width: 90px; flex-shrink: 0;
+  }
+  .flow-arrow-h { font-size: 1.2rem; color: #1A3D7C; font-weight: bold; padding: 0 3px; align-self: center; flex-shrink: 0; }
+  .flow-ok {
+    background: #E8F5E9; border: 1px solid #16A34A; border-radius: 6px;
+    padding: 4px 6px; font-size: 0.62rem; color: #166534; font-weight: bold; text-align: center; white-space: nowrap;
+  }
+  .flow-gate-box {
+    background: #FEF2F2; border: 2px solid #DC2626; border-radius: 8px;
+    padding: 10px 8px; text-align: center; width: 90px; flex-shrink: 0;
+  }
+  .flow-parallel {
+    background: #F0F4F8; border: 1px solid #94A3B8; border-radius: 8px;
+    padding: 8px 12px; margin: 0 4px;
+  }
+  .flow-lbl { font-size: 0.67rem; font-weight: bold; margin-top: 3px; }
+  .flow-nm  { font-size: 0.62rem; margin-top: 2px; }
+  .flow-ai  { font-size: 0.59rem; color: #B45309; margin-top: 2px; }
+  .flow-sub { font-size: 0.62rem; margin-top: 2px; }
+  .flow-arrow-v { font-size: 1rem; color: #1A3D7C; font-weight: bold; line-height: 1; }
+
+  /* ── COMPARISON ── */
+  .compare-band { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .compare-card { background: #fff; border-radius: 12px; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .compare-card.amateur { border: 2px solid #DC2626; }
+  .compare-card.colt    { border: 2px solid #16A34A; }
+  .compare-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; padding-bottom: 6px; }
+  .compare-card.amateur .compare-title { color: #DC2626; border-bottom: 2px solid #DC2626; }
+  .compare-card.colt    .compare-title { color: #16A34A; border-bottom: 2px solid #16A34A; }
+  .compare-list { list-style: none; }
+  .compare-list li { font-size: 0.8rem; color: #444; padding: 4px 0; display: flex; gap: 6px; border-bottom: 1px solid #f0f0f0; }
+  .compare-list li:last-child { border-bottom: none; }
+  .compare-card.amateur .compare-list li .mark { color: #DC2626; }
+  .compare-card.colt    .compare-list li .mark { color: #16A34A; }
+
+  /* ── REASONS ── */
+  .reasons-band { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .reason-card { background: #fff; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-top: 3px solid #1A3D7C; }
+  .reason-num { font-size: 0.68rem; color: #B45309; font-weight: bold; letter-spacing: 0.1em; margin-bottom: 4px; }
+  .reason-icon { font-size: 1.6rem; margin-bottom: 6px; }
+  .reason-title { font-weight: bold; color: #1A3D7C; font-size: 0.85rem; margin-bottom: 6px; }
+  .reason-desc { font-size: 0.75rem; color: #555; line-height: 1.6; }
+
+  /* ── DIVIDER / LEGEND ── */
+  .divider { border: none; border-top: 1px solid #dce3ef; margin: 28px auto 20px; max-width: 1120px; }
+  .section-title { text-align: center; font-size: 0.78rem; font-weight: bold; color: #1A3D7C; letter-spacing: 0.08em; margin-bottom: 14px; }
+  .legend { display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap; max-width: 1120px; margin-left: auto; margin-right: auto; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #444; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .updated { text-align: right; font-size: 0.7rem; color: #aaa; margin-top: 16px; max-width: 1120px; margin-left: auto; margin-right: auto; }
+</style>
+</head>
+<body>
+
+<h1>コルト AIエージェントエコシステム 体系図</h1>
+<p class="subtitle">2026年9月23日現在　／　コルト株式会社 × ベンチャーマネジメント（小林英二）　／　製作者会議（9/24）提示版</p>
+
+<!-- DIFF NOTE -->
+<div class="diff-note">
+  <strong>【2026-09-23 更新内容】</strong>
+  　① <strong>MANGA00（漫画制作管理エージェント）をオーケストレーターとして明確化</strong> — オーナー直下に配置。各チームの成果物を把握し、状況に応じて次のエージェントへつなぐ司令塔<br>
+  　② <strong>INPUT00（顧客情報収集エージェント）をMANGA00の左隣・Step 0として位置づけ</strong> <span class="new-badge">修正</span> — 顧客情報なしでは他のどのチームも動き出せない<br>
+  　③ 制作承認チームを4チームの1つに整理（WF1=営業提案書 / WF2=稟議承認書）<br>
+  <span style="font-size:0.7rem;color:#888;">※ 使用AIはすべて仮設定。製作者会議での議論・検証をもとに確定予定。</span>
+</div>
+
+<!-- HISTORY TIMELINE -->
+<div class="history-band">
+  <div class="history-band-title">📜 ツールの変遷 — 漫画制作の歴史はツールの進化史。コルトのコアは変わらない。</div>
+  <div class="history-row">
+    <div class="history-era">
+      <div class="h-era-label">ERA 1</div>
+      <div class="h-era-icon">✏️</div>
+      <div class="h-era-name">紙とペンの時代</div>
+      <div class="h-era-desc">原稿用紙・Gペン・スクリーントーン</div>
+    </div>
+    <div class="h-arrow">→</div>
+    <div class="history-era">
+      <div class="h-era-label">ERA 2</div>
+      <div class="h-era-icon">📱</div>
+      <div class="h-era-name">タブレットの時代</div>
+      <div class="h-era-desc">iPad・ペンタブ・CLIP STUDIO PAINT</div>
+    </div>
+    <div class="h-arrow">→</div>
+    <div class="history-era h-era-current">
+      <div class="h-era-label">ERA 3 ── 現在</div>
+      <div class="h-era-icon">🤖</div>
+      <div class="h-era-name">AIエージェントの時代</div>
+      <div class="h-era-desc">ツールが変わるだけ。コルトの本質は変わらない。</div>
+    </div>
+  </div>
+</div>
+
+<!-- OWNER -->
+<div class="owner-wrap">
+  <div class="owner-box">
+    👤 大野社長 ＋ コルトスタッフ（人間）
+    <div class="owner-sub">監修・方針判断・LoRAデータ提供・品質修正・承認判断</div>
+  </div>
+</div>
+
+<!-- MANGA00 + INPUT00 横並び -->
+<div class="manga-input-section">
+  <!-- Owner からの縦コネクタ -->
+  <div class="v-connector" style="margin-top:0;">
+    <div class="v-connector-line"></div>
+  </div>
+
+  <div class="manga-input-row">
+
+    <!-- 左：INPUT00（Step 0） -->
+    <div class="input00-side-box">
+      <div class="input00-title">
+        <span class="step0-badge">Step 0</span>
+        📥 INPUT00
+      </div>
+      <div style="font-size:0.72rem;color:#0369A1;margin-bottom:8px;">顧客情報収集エージェント<br>MANGA00が最初に起動するサブエージェント</div>
+      <div class="input00-grid">
+        <div class="input00-item"><span class="i-label">クライアント基本情報</span>社名・業種・規模・担当者</div>
+        <div class="input00-item"><span class="i-label">顧客ニーズ・課題</span>何を伝えたいか・解決したい問題</div>
+        <div class="input00-item"><span class="i-label">テーマ・ジャンル</span>作品の方向性・世界観・トーン</div>
+        <div class="input00-item"><span class="i-label">ターゲット読者</span>年齢層・性別・媒体・配信形式</div>
+        <div class="input00-item"><span class="i-label">予算・スケジュール</span>ページ数・納期・修正回数</div>
+        <div class="input00-item"><span class="i-label">参考スタイル</span>好みの画風・他社事例・避けたい表現</div>
+      </div>
+      <div style="margin-top:8px;font-size:0.68rem;color:#0369A1;border-top:1px dashed #BAE6FD;padding-top:6px;">
+        → STORYチーム・WF1・各チームへ配布
+      </div>
+    </div>
+
+    <!-- 横矢印 -->
+    <div class="h-row-arrow">→</div>
+
+    <!-- 右：MANGA00（オーケストレーター） -->
+    <div class="manga00-box">
+      🧭 MANGA00 — 漫画制作管理エージェント（オーケストレーター）
+      <div class="manga00-ai">💻 使用AI：Claude（Sonnet）</div>
+      <div class="manga00-role">
+        全エージェントの指揮塔。まず <strong style="color:#FFD700;">Step 0: INPUT00（左）を起動</strong> して顧客情報を収集し、
+        STORYチーム → 制作承認チーム → VISUALチーム → CSPチームを順次起動・管理する。
+        チーム間の連携制御・品質判断・差し戻し判定もMANGA00が担う。
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MANGA00 からの縦コネクタ（teamsへ） -->
+  <div class="v-connector">
+    <div class="v-connector-line"></div>
+  </div>
+</div>
+
+<!-- ===== TEAMS ROW ===== -->
+<div class="teams-row">
+
+  <!-- 1: ストーリー生成チーム -->
+  <div class="team team-story">
+    <div class="team-header">📚 ストーリー生成チーム</div>
+    <div class="team-body">
+      <ul class="worker-list">
+        <li class="worker">
+          <span class="worker-id">STORY01</span>
+          <div>
+            <div class="worker-name">企画立案・ネーム作成</div>
+            <div class="worker-desc">INPUT00の顧客情報をもとに企画・テーマを設計</div>
+            <span class="worker-ai">💻 Claude（Sonnet）</span>
+          </div>
+        </li>
+        <li class="worker">
+          <span class="worker-id">STORY02</span>
+          <div>
+            <div class="worker-name">ネーム・コマ割り生成</div>
+            <div class="worker-desc">企画 → コマ割り変換・セリフ最適化</div>
+            <span class="worker-ai">💻 Claude（Sonnet）</span>
+          </div>
+        </li>
+        <li class="worker">
+          <span class="worker-id">STORY03</span>
+          <div>
+            <div class="worker-name">ストーリー品質チェック</div>
+            <div class="worker-desc">整合性・顧客要件との合致・ブランド一貫性チェック</div>
+            <span class="worker-ai">💻 Claude（Sonnet）</span>
+          </div>
+        </li>
+      </ul>
+      <div class="seq-note">
+        <strong>⏩ 先行起動チーム</strong><br>
+        INPUT00の情報を受け取り最初に動き出す。
+        企画の方向性が固まった段階で
+        制作承認チームのWF1へ進捗を共有する。
+      </div>
+      <div class="pipeline-section">
+        <div class="pipeline-label">▶ 実行パイプライン</div>
+        <div class="pipeline-flow">📋 STORY01 → STORY02 → STORY03</div>
+        <div class="pipeline-flow">→ 企画進捗をWF1へ共有（途中）</div>
+        <div class="pipeline-flow">→ ネーム完成でWF2へ引き渡し</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2: 制作承認チーム（WF1 + WF2） -->
+  <div class="team team-approval">
+    <div class="team-header">📋 制作承認チーム　<span style="font-size:0.75rem;font-weight:normal;opacity:0.9;">— 提案・承認資料を専門に担当</span></div>
+    <div class="team-body">
+
+      <!-- WF1: 営業提案書 -->
+      <div class="wf-block wf1-block">
+        <div class="wf-block-title">
+          <span class="wf-badge wf1">WF1</span> 営業提案書ワークフロー
+          <span style="font-size:0.68rem;color:#78350F;font-weight:normal;">（STORYが進んだ段階で起動）</span>
+        </div>
+        <div class="wf-agent">
+          <span class="wf-id wf1-id">PROP01</span>
+          <div>
+            <div class="wf-name">営業提案書エージェント</div>
+            <div class="wf-desc">顧客情報＋STORYの企画方向性を組み合わせ、具体的な提案資料を生成</div>
+            <span class="wf-ai">💻 Claude（Sonnet）</span><br>
+            <span class="input-src">📥 INPUT00の顧客情報</span>
+            <span class="input-src story">📚 STORYの企画進捗</span>
+          </div>
+        </div>
+        <div class="wf-items">
+          <div class="wf-item"><span class="ck">①</span><span>制作実績・スタイルサンプル</span></div>
+          <div class="wf-item"><span class="ck">②</span><span>企画方向性（STORYより）・世界観の概要</span></div>
+          <div class="wf-item"><span class="ck">③</span><span>制作フロー・スケジュール概要</span></div>
+          <div class="wf-item"><span class="ck">④</span><span>費用見積もり・コルトの差別化ポイント</span></div>
+          <div class="wf-item"><span class="ck">⑤</span><span>想定Q&A・FAQ</span></div>
+        </div>
+        <div class="wf-result">
+          <span class="wf-result-ok">✓ 受注 → STORYチーム継続・WF2へ</span>
+          <span class="wf-result-ng">✗ 再提案 → WF1に差し戻し</span>
+        </div>
+      </div>
+
+      <!-- WF2: 制作承認書（稟議） -->
+      <div class="wf-block wf2-block">
+        <div class="wf-block-title">
+          <span class="wf-badge wf2">WF2</span> 制作承認書ワークフロー
+          <span class="gate-badge">GATE</span>
+          <span style="font-size:0.68rem;color:#7F1D1D;font-weight:normal;">（ネーム完成後に起動）</span>
+        </div>
+        <div class="wf-agent">
+          <span class="wf-id wf2-id">PROP02</span>
+          <div>
+            <div class="wf-name">稟議承認書エージェント</div>
+            <div class="wf-desc">顧客社内の<strong>上司への稟議</strong>に耐える具体的な承認資料を生成。承認前はVISUAL着手禁止。</div>
+            <span class="wf-ai">💻 Claude（Sonnet）</span><br>
+            <span class="input-src">📥 INPUT00の顧客情報</span>
+            <span class="input-src story">📚 STORYの完成ネーム</span>
+          </div>
+        </div>
+        <div class="wf-items">
+          <div class="wf-item"><span class="ck">①</span><span><strong>ネーム全ページ</strong>（コマ割り・セリフ入り）— 上司が全話を読める状態</span></div>
+          <div class="wf-item"><span class="ck">②</span><span><strong>キャラクター設定書</strong>＋ Anifusion試験生成サンプル画像</span></div>
+          <div class="wf-item"><span class="ck">③</span><span><strong>世界観・テーマ定義書</strong>（顧客要件との対応を明示）</span></div>
+          <div class="wf-item"><span class="ck">④</span><span><strong>スケジュール・ページ数・費用内訳</strong></span></div>
+          <div class="wf-item"><span class="ck">⑤</span><span><strong>修正対応範囲</strong>（承認後に変更できる・できない範囲を明記）</span></div>
+          <div class="wf-item"><span class="ck">⑥</span><span><strong>リスク事項</strong>（ここで確定しないとやり直しが発生する項目）</span></div>
+        </div>
+        <div class="wf-warn">
+          ⚠️ 承認者（上司）は制作会議に出ていない前提。<strong>曖昧表現・TBD・未定は記載禁止。</strong>差し戻しゼロを目指す。
+        </div>
+        <div class="wf-result">
+          <span class="wf-result-ok">✓ 社内承認 → VISUALチームへ</span>
+          <span class="wf-result-ng">✗ 差し戻し → STORYで修正 → WF2再提出</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3: ビジュアル生成チーム -->
+  <div class="team team-visual">
+    <div class="team-header">🎨 ビジュアル生成チーム</div>
+    <div class="team-body">
+      <ul class="worker-list">
+        <li class="worker">
+          <span class="worker-id">VISUAL01</span>
+          <div>
+            <div class="worker-name">キャラクター画像生成</div>
+            <div class="worker-desc">LoRAモデル適用・プロンプト設計・スタイル管理</div>
+            <span class="worker-ai">🖼 Anifusion（キャラLoRA）<span class="provisional-badge">仮</span></span>
+          </div>
+        </li>
+        <li class="worker">
+          <span class="worker-id">VISUAL02</span>
+          <div>
+            <div class="worker-name">背景・世界観生成</div>
+            <div class="worker-desc">背景画像・コルト独自スタイル形成・高品質補完</div>
+            <span class="worker-ai">🖼 Anifusion（背景LoRA）＋ Midjourney<span class="provisional-badge">仮</span></span>
+          </div>
+        </li>
+        <li class="worker">
+          <span class="worker-id">VISUAL03</span>
+          <div>
+            <div class="worker-name">描画仕上げ・AI補正</div>
+            <div class="worker-desc">CSP内蔵AI機能で仕上げ・ライン補正・トーン処理</div>
+            <span class="worker-ai">✏️ CSP AI機能<span class="provisional-badge">仮</span></span>
+          </div>
+        </li>
+      </ul>
+      <div class="lora-note">
+        <strong>📌 LoRAとは？</strong>　見本20〜30枚をAIに学習させコルト固有の画風を再現。Anifusionはエンジニア不要・ブラウザのみで学習可能。全ページの絵柄統一性担保に不可欠。
+      </div>
+      <div class="pipeline-section">
+        <div class="pipeline-label">▶ 実行パイプライン</div>
+        <div class="pipeline-flow">🎨 VISUAL01 → VISUAL02 → VISUAL03</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4: CSP統合チーム -->
+  <div class="team team-csp">
+    <div class="team-header">⚙️ CSP統合チーム</div>
+    <div class="team-body">
+      <ul class="worker-list">
+        <li class="worker">
+          <span class="worker-id">CSP01</span>
+          <div>
+            <div class="worker-name">コマ割り作成</div>
+            <div class="worker-desc">ネーム → コマ構成・ページガイドライン自動化</div>
+            <span class="worker-ai">⚙️ CSPマクロ＋Claude<span class="provisional-badge">仮</span></span>
+          </div>
+        </li>
+        <li class="worker">
+          <span class="worker-id">CSP02</span>
+          <div>
+            <div class="worker-name">セリフ・フキダシ配置</div>
+            <div class="worker-desc">フキダシ自動配置・SQ・スクリーントーン</div>
+            <span class="worker-ai">⚙️ CSPマクロ＋Claude<span class="provisional-badge">仮</span></span>
+          </div>
+        </li>
+        <li class="worker">
+          <span class="worker-id">CSP03</span>
+          <div>
+            <div class="worker-name">CSP最終出力管理</div>
+            <div class="worker-desc">PSDレイヤー管理・フォルダ同期・最終品質チェック</div>
+            <span class="worker-ai">⚙️ CSPマクロ＋Claude<span class="provisional-badge">仮</span></span>
+          </div>
+        </li>
+      </ul>
+      <div class="pipeline-section">
+        <div class="pipeline-label">▶ 実行パイプライン</div>
+        <div class="pipeline-flow">⚙️ CSP01 → CSP02 → CSP03 → 完成</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /teams-row -->
+
+<!-- MANGA00の役割説明 -->
+<hr class="divider">
+<div style="max-width:1120px;margin:0 auto;background:#fff;border-radius:12px;padding:20px 28px;box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid #1A3D7C;">
+  <div style="font-size:0.85rem;font-weight:bold;color:#1A3D7C;margin-bottom:10px;">🧭 MANGA00（オーケストレーター）の役割</div>
+  <div style="font-size:0.8rem;color:#444;line-height:1.9;">
+    MANGA00は各チームの成果物を把握し、<strong>状況に応じて次にどのエージェントにつなぐかを判断する</strong>司令塔です。<br>
+    たとえば「ネームが完成したら即WF1へ」という場合もあれば、<strong>キャラクター画像・世界観ビジュアルを1〜2枚作成してからWF1（営業提案書）に組み込む</strong>という判断もあります。
+    WF2（稟議承認書）でも同様に、ビジュアルを多数掲載した上で稟議に回すこともあります。<br>
+    <strong>どのチームの成果物を、いつ、どこにつなぐか</strong> ── この柔軟な判断ができることが、AIエージェントチームを編成する最大の価値です。
+  </div>
+</div>
+
+<!-- COMPARISON -->
+<hr class="divider">
+<p class="section-title">─── 同じAIを使っても、なぜコルトは違うのか？ ───</p>
+<div class="compare-band">
+  <div class="compare-card amateur">
+    <div class="compare-title">😐 素人がAIを使った場合</div>
+    <ul class="compare-list">
+      <li><span class="mark">✗</span><span>顧客情報収集が曖昧なまま制作スタート → 方向性がズレる</span></li>
+      <li><span class="mark">✗</span><span>LoRA学習なし → 画風がページごとにバラバラ</span></li>
+      <li><span class="mark">✗</span><span>稟議なしで着手 → 後から上司NGで全やり直し</span></li>
+      <li><span class="mark">✗</span><span>修正が次に活かされず毎回同じ品質</span></li>
+      <li><span class="mark">✗</span><span>AIが出した画をそのまま使う（画一的）</span></li>
+    </ul>
+  </div>
+  <div class="compare-card colt">
+    <div class="compare-title">⭐ コルトのAIエージェントの場合</div>
+    <ul class="compare-list">
+      <li><span class="mark">✓</span><span>MANGA00がStep 0でINPUT00を起動 → 顧客情報を整理してから全工程がスタート</span></li>
+      <li><span class="mark">✓</span><span>LoRA学習 → コルト固有の画風を全ページ維持</span></li>
+      <li><span class="mark">✓</span><span>WF2で稟議資料を事前作成 → やり直しゼロを目指す</span></li>
+      <li><span class="mark">✓</span><span>プロの修正が積み重なり精度・品質が向上する</span></li>
+      <li><span class="mark">✓</span><span>プロが監修・修正し「コルトらしさ」を守る</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- 3 REASONS -->
+<hr class="divider">
+<p class="section-title">─── コルトが差別化できる 3つの理由 ───</p>
+<div class="reasons-band">
+  <div class="reason-card">
+    <div class="reason-num">REASON 01</div>
+    <div class="reason-icon">📚</div>
+    <div class="reason-title">何をどう学習させるか</div>
+    <div class="reason-desc">LoRAに「何を覚えさせるか」はコルトの固有資産。キャラ・背景・画風の組合せは会社ごとに異なる独自ナレッジになり、他社には再現できない。</div>
+  </div>
+  <div class="reason-card">
+    <div class="reason-num">REASON 02</div>
+    <div class="reason-icon">⚙️</div>
+    <div class="reason-title">どのAIをどう組み合わせるか</div>
+    <div class="reason-desc">Claude × Anifusion × CSPマクロの組合せはコルト独自の設計。スキルを積むほど他社が真似できない体制になる。</div>
+  </div>
+  <div class="reason-card">
+    <div class="reason-num">REASON 03</div>
+    <div class="reason-icon">🔄</div>
+    <div class="reason-title">修正をプログラム化して蓄積する</div>
+    <div class="reason-desc">「この絵はこう直す」という判断を繰り返すことでプロンプトやマクロに蓄積。プロのスキルが会社の財産になっていく。</div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<hr class="divider">
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1A3D7C;"></div>MANGA00 オーケストレーター（全体指揮）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0891B2;"></div>INPUT00 顧客情報収集 Step 0（MANGA00が最初に起動）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1E40AF;"></div>ストーリー生成チーム（Claude・先行起動）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#92400E;"></div>制作承認チーム（WF1 営業提案書 / WF2 稟議承認書）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#B45309;"></div>ビジュアル生成チーム（Anifusion+MJ+CSP AI）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6D28D9;"></div>CSP統合チーム（CSPマクロ+Claude）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#DC2626;"></div>WF2 GATEチェックポイント（承認前VISUAL禁止）</div>
+</div>
+
+<p class="updated">2026-09-23 ／ 小林英二 ／ MANGA00をオーケストレーターとして明確化・INPUT00をStep 0に再定義 ／ 使用AIはすべて仮設定</p>
+
+</body>
+</html>
