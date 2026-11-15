@@ -3,7 +3,7 @@
 設計図: [`../docs/blueprint/manga_agent_ecosystem_orgchart.html`](../docs/blueprint/manga_agent_ecosystem_orgchart.html)（コルト AIエージェントエコシステム 体系図）
 進捗: [`../docs/blueprint/README.md`](../docs/blueprint/README.md)
 
-エージェントは体系図の順に **1つずつ** 作っていきます。現在動くのは **INPUT00（顧客情報収集）** だけです。
+エージェントは体系図の順に **1つずつ** 作っていきます。現在動くのは **MANGA00（オーケストレーター）** と **INPUT00（顧客情報収集）** です。
 
 ## セットアップ
 
@@ -16,7 +16,48 @@ Claude API のキーを設定します（`ANTHROPIC_API_KEY`、または `ant au
 
 ## 使い方
 
-### INPUT00 顧客情報収集（Step 0）
+### 基本: MANGA00 に案件を任せる
+
+ヒアリングメモ・メール・議事録などをテキストファイルにまとめて渡します。
+
+```bash
+npm run manga -- start examples/hearing-memo.md
+```
+
+MANGA00 が状況を判断しながら、動かせるエージェントを順に動かします。
+人の対応が必要になると止まり、`runs/<日時>/NEXT_ACTION.md` に「誰に・何を」依頼するかを書き出します。
+
+| 止まる場面 | 対応 |
+|---|---|
+| 顧客情報に必須項目の不足がある | NEXT_ACTION.md の質問を顧客に送り、回答を `source.md` の末尾に追記 |
+| 次のエージェントがまだ未実装 | それまでの成果物をもとにスタッフが手作業で進める |
+| WF2（稟議承認）の承認待ち | 承認が得られたら `npm run manga -- approve <runId> WF2 --by 承認者名` |
+| MANGA00 の判断がルール違反（差し止め） | 内容を確認し、資料や成果物を直す |
+
+対応が終わったら MANGA00 を再開します。
+
+```bash
+npm run manga -- continue <runId>
+```
+
+進み具合の確認:
+
+```bash
+npm run manga -- status <runId>
+```
+
+MANGA00 の判断の経緯は `runs/<日時>/MANGA00_log.md` に残ります。
+
+#### MANGA00 のルール（コードで強制）
+
+MANGA00（Claude）の判断は、実行前に次の点をコードで確認します。合わない判断は実行せず「差し止め」て止まります。
+
+- 実装済みのエージェントか
+- 前提となる成果物が揃っているか（設計図の順番）
+- GATE を通過しているか（WF2 の承認前は VISUAL・CSP の本制作に着手しない）
+- 資料も指示も変わらないまま、同じエージェントを続けて実行していないか
+
+### INPUT00 だけを単体で動かす（Step 0）
 
 ヒアリングメモ・メール・議事録などをテキストファイルにまとめて渡します。
 
@@ -55,12 +96,16 @@ API キーなしで動作確認する場合は `--mock` を付けます。
 ```
 src/
   cli.ts          コマンド
-  runner.ts       MANGA00 の土台（エージェント実行・成果物保存）
+  blueprint.ts    設計図（全エージェントの順番・前提・GATE）
+  orchestrator.ts MANGA00 の実行ループ（判断 → チェック → 実行）
+  state.ts        案件の状態（実行記録・承認・判断履歴）
+  runner.ts       エージェント実行・成果物保存
   llm.ts          Claude API 呼び出し（構造化出力・ストリーミング）
   schemas.ts      各エージェントの出力スキーマ
   report.ts       成果物 → スタッフ確認用 Markdown
   agents/
     index.ts      エージェント登録簿
+    manga00.ts    MANGA00（判断の役割プロンプト）
     input.ts      INPUT00
 ```
 
@@ -68,6 +113,6 @@ src/
 
 1. `src/schemas.ts` に出力スキーマを追加
 2. `src/agents/<team>.ts` にエージェントを定義（役割プロンプト・入力の組み立て・モック）
-3. `src/agents/types.ts` の `Outputs` と `src/agents/index.ts` に登録
+3. `src/agents/types.ts` の `Outputs` と `src/agents/index.ts` に登録（`src/blueprint.ts` の前提条件も確認）
 4. 必要なら `src/report.ts` に確認用 Markdown を追加
 5. `docs/blueprint/README.md` の進捗表を更新

@@ -1,7 +1,7 @@
 /**
- * MANGA00（オーケストレーター）の土台。
- * いまは「エージェントを1つ実行して、成果物を runs/<id>/ に保存する」だけを担う。
- * エージェントが増えたら、ここに工程順の自動連携と監修ゲートを足していく。
+ * エージェント実行の共通処理。
+ * エージェントを1つ実行し、成果物を runs/<id>/ に保存して、実行記録を state.json に残す。
+ * 工程の判断（次に何を動かすか）は orchestrator.ts（MANGA00）が行う。
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -11,6 +11,7 @@ import { AGENTS } from "./agents/index.js";
 import type { AgentId, Outputs, PipelineContext } from "./agents/types.js";
 import { callAgent } from "./llm.js";
 import { toMarkdown } from "./report.js";
+import { hashSource, loadState, saveState } from "./state.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const RUNS_DIR = path.join(ROOT, "runs");
@@ -23,7 +24,7 @@ const SHARED_SYSTEM_BASE = `あなたは漫画制作会社コルトのAIエー�
 - 以下の「コルトスタイルガイド」を常に守る。ガイドと作業指示が矛盾する場合はガイドを優先し、その旨を出力内のメモ欄に書く。
 - 入力に書かれていない事実を作らない。不明点は「要確認」と明記する。`;
 
-async function loadSharedSystem(): Promise<string> {
+export async function loadSharedSystem(): Promise<string> {
   const guide = await readFile(path.join(ROOT, "config", "colt-style.md"), "utf8");
   return `${SHARED_SYSTEM_BASE}\n\n<colt_style_guide>\n${guide}\n</colt_style_guide>`;
 }
@@ -55,7 +56,13 @@ export async function createRun(sourcePath: string): Promise<PipelineContext> {
   return { runDir, source, outputs: {} };
 }
 
-export async function runAgent(ctx: PipelineContext, id: AgentId, opts: { mock: boolean }): Promise<string> {
+export interface RunAgentOptions {
+  mock: boolean;
+  /** MANGA00 などからの追加指示 */
+  instructions?: string | null;
+}
+
+export async function runAgent(ctx: PipelineContext, id: AgentId, opts: RunAgentOptions): Promise<string> {
   const agent = AGENTS[id];
   for (const req of agent.requires) {
     if (ctx.outputs[req] == null) throw new Error(`${id} の実行には ${req} の成果物が必要です。`);
@@ -71,13 +78,15 @@ export async function runAgent(ctx: PipelineContext, id: AgentId, opts: { mock: 
       agentId: agent.id,
       sharedSystem: await loadSharedSystem(),
       rolePrompt: agent.rolePrompt,
-      userContent: agent.buildInput(ctx),
+      userContent: opts.instructions
+        ? `${agent.buildInput(ctx)}\n\n<manga00_instructions>\n${opts.instructions}\n</manga00_instructions>`
+        : agent.buildInput(ctx),
       schema: agent.schema,
       effort: agent.effort,
     });
     data = res.data;
     const u = res.usage;
-    console.log(`  tokens: in ${u.input} / out ${u.output} / cache read ${u.cacheRead} / cache write ${u.cacheWrite}（${res.servedBy}）`);
+    console.log(`  トークン: 入力 ${u.input} / 出力 ${u.output} / キャッシュ読込 ${u.cacheRead} / キャッシュ書込 ${u.cacheWrite}（${res.servedBy}）`);
   }
 
   (ctx.outputs as Record<string, unknown>)[id] = data;
@@ -88,6 +97,9 @@ export async function runAgent(ctx: PipelineContext, id: AgentId, opts: { mock: 
     await writeFile(path.join(ctx.runDir, `${id}.md`), md);
     console.log(`  スタッフ確認用: ${path.relative(process.cwd(), path.join(ctx.runDir, `${id}.md`))}`);
   }
+  const state = await loadState(ctx.runDir);
+  state.agentRuns[id] = { at: new Date().toISOString(), sourceHash: hashSource(ctx.source), instructions: opts.instructions ?? null };
+  await saveState(ctx.runDir, state);
   console.log(`✔ ${id} 完了（${((Date.now() - started) / 1000).toFixed(1)}秒）→ ${path.relative(process.cwd(), out)}`);
   return out;
 }
