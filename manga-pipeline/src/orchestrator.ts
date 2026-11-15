@@ -6,11 +6,13 @@
  *   3. 判断をコードでチェック（実装済みか・前提が揃っているか・GATE を通過しているか）
  *   4. エージェントを実行 → 1 に戻る。人への依頼か完了なら止まる
  *
+ * 顧客情報が足りないときは、その場で質問して（対話モード）回答を資料に追記し、そのまま先へ進む。
  * 止まったときは runs/<id>/NEXT_ACTION.md に「次に人がやること」を書き出す。
  */
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AGENTS } from "./agents/index.js";
+import { appendAnswers, askQuestions } from "./ask.js";
 import { MANGA00_ROLE, Manga00Decision } from "./agents/manga00.js";
 import type { AgentId, PipelineContext } from "./agents/types.js";
 import { BLUEPRINT, GATES, blueprintEntry, type BlueprintId } from "./blueprint.js";
@@ -104,7 +106,9 @@ function mockDecide(ctx: PipelineContext, status: AgentStatus[]): Manga00Decisio
         to: "client",
         title: "制作開始前のご確認事項",
         message: "漫画制作を始めるにあたり、以下の点をお教えください。",
-        questions: profile.missing_items.filter((m) => m.priority === "required").map((m) => m.question),
+        questions: [...profile.missing_items]
+          .sort((a, b) => (a.priority === b.priority ? 0 : a.priority === "required" ? -1 : 1))
+          .map((m) => m.question),
       },
     };
   }
@@ -187,9 +191,17 @@ async function writeLog(ctx: PipelineContext, state: RunState): Promise<void> {
   await writeFile(path.join(ctx.runDir, "MANGA00_log.md"), lines.join("\n"));
 }
 
-export async function runManga00(ctx: PipelineContext, runId: string, opts: { mock: boolean }): Promise<void> {
+export interface Manga00Options {
+  mock: boolean;
+  /** 顧客情報が足りないとき、その場で質問する */
+  interactive: boolean;
+}
+
+export async function runManga00(ctx: PipelineContext, runId: string, opts: Manga00Options): Promise<void> {
   console.log(`🧭 MANGA00 起動（run: ${runId}）${opts.mock ? "［モック］" : ""}`);
   const sharedSystem = opts.mock ? "" : await loadSharedSystem();
+  /** この起動中にすでに聞いた質問（同じ質問を繰り返さない） */
+  const asked = new Set<string>();
 
   for (let step = 1; step <= MAX_STEPS; step++) {
     const state = await loadState(ctx.runDir);
@@ -249,6 +261,29 @@ export async function runManga00(ctx: PipelineContext, runId: string, opts: { mo
       await saveState(ctx.runDir, { ...(await loadState(ctx.runDir)), decisions: state.decisions });
       await writeLog(ctx, state);
       continue;
+    }
+
+    // 顧客情報の不足 → 対話モードならその場で質問する
+    const req = decision.human_request;
+    if (opts.interactive && decision.action === "ask_human" && req?.to === "client") {
+      const fresh = req.questions.filter((q) => !asked.has(q));
+      if (fresh.length) {
+        fresh.forEach((q) => asked.add(q));
+        const qas = await askQuestions(req.title, fresh);
+        const answered = qas.filter((x) => x.answer).length;
+        if (answered > 0) {
+          ctx.source = await appendAnswers(ctx.runDir, qas, ctx.source);
+          state.decisions.push({
+            at, action: decision.action, agent_id: null, situation: decision.situation, reason: decision.reason,
+            result: `その場で質問: ${answered}件回答、${qas.length - answered}件は未回答（source.md に追記）`,
+          });
+          await saveState(ctx.runDir, state);
+          await writeLog(ctx, state);
+          console.log(`\n✔ ${answered}件の回答を資料に追記しました。顧客情報を更新して続けます。`);
+          continue;
+        }
+        console.log("\n回答がなかったため、顧客への確認事項として書き出します。");
+      }
     }
 
     // 人への依頼 or 完了 → ここで止まる

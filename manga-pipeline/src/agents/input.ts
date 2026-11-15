@@ -32,30 +32,52 @@ export const INPUT00: LlmAgent<typeof ClientProfile> = {
 ルール:
 - 資料に書かれている内容だけを各欄に入れる。書かれていない欄は null（配列は空）にする。
 - 資料から推測できるが明言されていない内容は欄に入れず、assumptions に根拠と一緒に書く。
-- 不足項目は missing_items に入れ、担当者が顧客にそのまま送れる丁寧な質問文にする。
-  - required: これがないと企画を始められない項目（伝えたいこと、ターゲット読者、ページ数、納期）
+- 資料内の数値・固有名詞は原文どおりに転記する。
+- 資料に「追加ヒアリング」の回答があれば、元の資料より優先して反映する。
+
+不足していると感じたら、必ず質問する:
+- 次のものはすべて「不足」とみなし、missing_items に質問を入れる。
+  - 書かれていない項目
+  - 曖昧な表現（「〜くらい」「未定」「要相談」「後で送る」「課内で確認」など）
+  - 資料の中で矛盾している内容
+  - 企画やネームを作るときに判断に迷いそうな点（例: 実在の店舗名を出してよいか、マスコットの使い方の制約）
+- priority の基準:
+  - required: これがないと企画を始められない項目。伝えたいこと、ターゲット読者、ページ数、納期、掲載媒体・配信形式（縦読みか見開きかでコマ割りが変わるため）
   - recommended: あると精度が上がる項目
-- ready_for_story は required の不足が1つもないときだけ true。
-- 資料内の数値・固有名詞は原文どおりに転記する。`,
+- 質問は1つにつき1つのことだけを聞き、答えやすいように選択肢や例を添える
+  （例: 「掲載形式は、スマホ向けの縦スクロールと、冊子のような見開きのどちらをご希望でしょうか。」）。
+- 質問は required をすべて入れたうえで、recommended は重要なものから5件までにする。
+- ready_for_story は required の不足（曖昧なものを含む）が1つもないときだけ true。`,
   buildInput: (ctx) =>
     `次の資料から顧客情報を整理してください。\n\n<source_materials>\n${ctx.source}\n</source_materials>`,
-  mock: () => ({
-    summary: "（モック）地方信用金庫が、若手向けに資産形成の基礎を伝える漫画を検討している。",
-    client: { company_name: "（モック）さくら信用金庫", industry: "金融（信用金庫）", size: null, contact_person: "広報課 田中様" },
-    needs: {
-      message: "NISAなど資産形成の基本",
-      problems: ["20〜30代の来店が少ない"],
-      desired_outcome: null,
-    },
-    theme: { direction: "親しみやすい学習漫画", genre: null, world: null, tone: "明るい" },
-    target: { age_range: "20〜30代", gender: null, media: "Webサイト", distribution_format: null },
-    budget_schedule: { pages: "8ページ", deadline: null, revision_count: null, budget: null },
-    style_reference: { preferred_style: null, references: [], avoid: ["投資を煽る表現"] },
-    assumptions: [{ field: "theme.genre", assumption: "お仕事・日常系", reason: "学習漫画で親しみやすさ重視のため" }],
-    missing_items: [
-      { field: "budget_schedule.deadline", priority: "required", question: "公開をご予定されている時期（納期）をお教えいただけますでしょうか。" },
-      { field: "needs.desired_outcome", priority: "recommended", question: "読み終えた方に、どのような行動を取っていただきたいとお考えでしょうか。" },
-    ],
-    ready_for_story: false,
-  }),
+  mock: (ctx) => (ctx.source.includes("追加ヒアリング") ? MOCK_READY : MOCK_NOT_READY),
+};
+
+const MOCK_NOT_READY: ClientProfile = {
+  summary: "（モック）地方信用金庫が、若手向けに資産形成の基礎を伝える漫画を検討している。",
+  client: { company_name: "（モック）さくら信用金庫", industry: "金融（信用金庫）", size: null, contact_person: "広報課 田中様" },
+  needs: {
+    message: "NISAなど資産形成の基本",
+    problems: ["20〜30代の来店が少ない"],
+    desired_outcome: null,
+  },
+  theme: { direction: "親しみやすい学習漫画", genre: null, world: null, tone: "明るい" },
+  target: { age_range: "20〜30代", gender: null, media: "Webサイト", distribution_format: null },
+  budget_schedule: { pages: "8ページ", deadline: null, revision_count: null, budget: null },
+  style_reference: { preferred_style: null, references: [], avoid: ["投資を煽る表現"] },
+  assumptions: [{ field: "theme.genre", assumption: "お仕事・日常系", reason: "学習漫画で親しみやすさ重視のため" }],
+  missing_items: [
+    { field: "budget_schedule.deadline", priority: "required", question: "公開をご予定されている時期（納期）をお教えいただけますでしょうか。" },
+    { field: "needs.desired_outcome", priority: "recommended", question: "読み終えた方に、どのような行動を取っていただきたいとお考えでしょうか。" },
+  ],
+  ready_for_story: false,
+};
+
+/** 追加ヒアリング後のモック: 必須情報が揃った状態 */
+const MOCK_READY: ClientProfile = {
+  ...MOCK_NOT_READY,
+  summary: "（モック・回答反映済み）地方信用金庫が、若手向けに資産形成の基礎を伝える漫画を作る。",
+  budget_schedule: { ...MOCK_NOT_READY.budget_schedule, deadline: "（回答より）" },
+  missing_items: MOCK_NOT_READY.missing_items.filter((m) => m.priority !== "required"),
+  ready_for_story: true,
 };

@@ -9,7 +9,8 @@
  *   rerun <エージェント> <runId>     既存の案件でエージェントを1つだけ再実行
  *   list                            実装済みエージェントの一覧
  *
- *   --mock  Claude API を呼ばずにダミーの出力で動作確認する
+ *   --mock    Claude API を呼ばずにダミーの出力で動作確認する
+ *   --no-ask  顧客情報が足りなくてもその場で質問せず、NEXT_ACTION.md に書き出して止まる
  */
 import path from "node:path";
 import { AGENTS } from "./agents/index.js";
@@ -30,7 +31,10 @@ function usage(): never {
   rerun <エージェント> <runId>     既存の案件でエージェントを1つだけ再実行
   list                            実装済みエージェントの一覧
 
-  --mock  Claude API を呼ばずにダミーの出力で動作確認する`);
+  --mock    Claude API を呼ばずにダミーの出力で動作確認する
+  --no-ask  顧客情報が足りなくてもその場で質問せず、NEXT_ACTION.md に書き出して止まる
+
+  ※ start / continue では、顧客情報が足りないと MANGA00 がその場で質問します。`);
   process.exit(1);
 }
 
@@ -50,6 +54,8 @@ function option(args: string[], name: string): string | null {
 async function main() {
   const args = process.argv.slice(2);
   const mock = args.includes("--mock");
+  // 顧客情報が足りないときにその場で質問するか（端末から実行したときは既定で質問する）
+  const interactive = args.includes("--ask") || (!args.includes("--no-ask") && process.stdin.isTTY === true);
   const positional: string[] = [];
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--by" || args[i] === "--note") i++;
@@ -65,13 +71,13 @@ async function main() {
     case "start": {
       if (!a1) usage();
       const ctx = await createRun(a1);
-      await runManga00(ctx, path.basename(ctx.runDir), { mock });
+      await runManga00(ctx, path.basename(ctx.runDir), { mock, interactive });
       return;
     }
 
     case "continue": {
       if (!a1) usage();
-      await runManga00(await loadContext(a1), a1, { mock });
+      await runManga00(await loadContext(a1), a1, { mock, interactive });
       return;
     }
 
